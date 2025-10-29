@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<x:description xmlns:x="http://www.jenitennison.com/xslt/xspec" xmlns:marc="http://www.loc.gov/MARC21/slim" stylesheet="">
+  <x:scenario label="lösche 998">
+    <x:context>
+      <datafield tag="998" ind1=" " ind2=" ">
+        <subfield code="a">Lösch mich!</subfield>
+      </datafield>
+      <datafield tag="999" ind1=" " ind2=" ">
+        <subfield code="a">Lass mich!</subfield>
+      </datafield>
+    </x:context>
+    <x:expect label="998 gelöscht">
+      <datafield tag="999" ind1=" " ind2=" ">
+        <subfield code="a">Lass mich!</subfield>
+      </datafield>
+    </x:expect>
+  </x:scenario>
+
+  <x:scenario label="lösche 77308 SF9" pending="do the other one first">
+    <x:context>
+      <datafield tag="773" ind1="0" ind2="8">
+        <subfield code="w">(AT-OBV)AC13695360</subfield>
+        <subfield code="q">2</subfield>
+        <subfield code="9">O:1</subfield>
+      </datafield>
+      <datafield tag="773" ind1="0" ind2="8">
+        <subfield code="i">Enthalten in</subfield>
+        <subfield code="t">Energy futures, environment and well-being</subfield>
+        <subfield code="d">Graz, [2017]</subfield>
+        <subfield code="g">S. 500-</subfield>
+        <subfield code="w">(AT-OBV)AC14481219</subfield>
+      </datafield>
+      <datafield tag="995" ind1=" " ind2=" ">
+        <subfield code="a">Lokales Feld, bitte nicht angreifen!</subfield>
+        <subfield code="9">LOCAL</subfield>
+      </datafield>
+    </x:context>
+    <x:expect label="77308 SF9 gelöscht, sonst keine Änderungen">
+      <x:context>
+        <datafield tag="773" ind1="0" ind2="8">
+          <subfield code="w">(AT-OBV)AC13695360</subfield>
+          <subfield code="q">2</subfield>
+        </datafield>
+        <datafield tag="773" ind1="0" ind2="8">
+          <subfield code="i">Enthalten in</subfield>
+          <subfield code="t">Energy futures, environment and well-being</subfield>
+          <subfield code="d">Graz, [2017]</subfield>
+          <subfield code="g">S. 500-</subfield>
+          <subfield code="w">(AT-OBV)AC14481219</subfield>
+        </datafield>
+        <datafield tag="995" ind1=" " ind2=" ">
+          <subfield code="a">Lokales Feld, bitte nicht angreifen!</subfield>
+          <subfield code="9">LOCAL</subfield>
+        </datafield>
+      </x:context>
+    </x:expect>
+  </x:scenario>
+</x:description>

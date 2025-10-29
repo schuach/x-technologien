@@ -1,0 +1,6 @@
+private/
+dist/
+xspec/
+
+*.log
+tmp/

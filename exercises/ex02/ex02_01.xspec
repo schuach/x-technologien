@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<x:description xmlns:x="http://www.jenitennison.com/xslt/xspec" xmlns:marc="http://www.loc.gov/MARC21/slim" stylesheet="ex02_01.xsl">
+  <x:scenario label="delete 500 if theres a SFa containing 'foo'">
+    <x:context>
+      <datafield tag="500" ind1=" " ind2=" ">
+        <subfield code="a">Eine Anmerkung</subfield>
+      </datafield>
+      <datafield tag="500" ind1=" " ind2=" ">
+        <subfield code="a">Eine foomerkung</subfield>
+      </datafield>
+      <datafield tag="500" ind1=" " ind2=" ">
+        <subfield code="a">Foo!</subfield>
+      </datafield>
+      <datafield tag="500" ind1=" " ind2=" ">
+        <subfield code="a">Ah, ein foo bar!</subfield>
+      </datafield>
+      <datafield tag="500" ind1=" " ind2=" ">
+        <subfield code="a">Mit Zahl: foo1</subfield>
+      </datafield>
+      <datafield tag="500" ind1=" " ind2=" ">
+        <subfield code="a">Mit großer Zahl: foo1234567890</subfield>
+      </datafield>
+      <datafield tag="500" ind1=" " ind2=" ">
+        <subfield code="a">Mit Dezimalzahl: foo2.25</subfield>
+      </datafield>
+    </x:context>
+    <x:expect label="all fields 500 containing 'foo' deleted">
+      <datafield tag="500" ind1=" " ind2=" ">
+        <subfield code="a">Eine Anmerkung</subfield>
+      </datafield>
+      <datafield tag="500" ind1=" " ind2=" ">
+        <subfield code="a">Foo!</subfield>
+      </datafield>
+    </x:expect>
+  </x:scenario>
+</x:description>

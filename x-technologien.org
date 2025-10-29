@@ -1,0 +1,479 @@
+#+title: X-Technologien
+#+options: ^:nil
+#+property: header-args:xquery :db ws-sample :exports both
+#+INFOJS_OPT: view:t toc:t ltoc:t mouse:underline buttons:0 path:org-info.min.js
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="solarized-light.min.css" />
+#+EXPORT_FILE_NAME: dist/index
+
+* XML
+** Präsentation
+https://www.stefanschuh.at/slides/slides/ULG2_4_2024/xml_ulg.html
+* X-Technologien Überblick
+** XPath
+Die bekannteste und wichtigste Funktion von XPath ist die navigation innerhalb einer XML-Struktur. Sprache zur Adressierung und Verarbeitung von Werten, die dem [[* Das Xquery and XPath Data Model (XDM)][XDM]] entsprechen. XPath ist eine "hosted language" in XSLT. Dort wird sie u. A. verwendet um Knoten zu Adressieren (in ~match~ und ~select~-Attributen), aber auch, um Sequenzen von Werten zu erzeugen (z. B. in Variablendefinitionen).
+** XQuery
+XQuery ist eine Abfragesprache für XML-Datenbanken. Die Sprache ist ein Superset von XPath, d. h. jeder gültige XPath-Ausdruck ist auch ein gültiger XQery-Ausdruck -- aber nicht umgekehrt. Sie dient nicht nur dazu, Knoten(mengen) auszuwählen, sondern auch dazu Daten zu aggregieren, Reports (vorzugsweise wieder in XML) zu erstellen, etc.
+** XSLT
+Die "XSL Transformations (XSLT)" dienen zur Transformation von XML, vorzugsweise in anderes XML. Die Sprache ist deklarativ und streng funktional. Diese Eigenschaften machen eignen sie besonders für komplexe Anwendungsfälle: Der funktionale Aufbau macht es unwahrscheinlicher, dass, wenn man an einem Schräubchen dreht, sich andere Schrauben unbemerkt mitdrehen. Ihre Syntax ist selbst wieder XML. Diese, [[https://de.wikipedia.org/wiki/Homoikonizit%C3%A4t][Homoikonizität]] genannte, Eigenschaft macht es möglich XSLT zu XSLT zu transformieren. Das passiert in einer recht simplen Form auch tatsächlich bei den Normalisierungen für Alma.
+* Das XQuery and XPath Data Model (XDM)
+XPath operiert nicht anhand der textuellen Struktur eines XML-Dokuments, sondern anhand des abstrakten Baumes, der durch Parsen von XML-Dokumenten oder -Fragmenten instanziiert wird.
+** Wichtige Begriffe
+*** Items
+Ein ~item~ ist entweder [[* Atomare Werte][atomarer Wert]], ein [[* Knoten][Knoten]] oder eine [[* Funktionen][Funktion]].
+*** Atomare Werte
+Atomare Werte sind Werte, die einem "atomaren Typ" angehören. Das sind z. B.:
+- xs:untypedAtomic :: Fallback für z. B. Attributwerte, wenn gegen kein Schema geprüft wird. D. h. der Prozessor sieht nur den Textinhalt "2002-10-10T12:00:00-05:00Z" und weiß nicht, dass er ihn z. B. als Datum (~xs:dateTime~) interpretieren soll.
+- xs:numeric :: Vereinigungstyp aus ~xs:double~, ~xs:float~ und ~xs:decimal~. Also Zahlen.
+- xs:string :: Eine Zeichenkette
+- xs:boolean :: Ein Wahrheitswert. D. h. ~true~ oder ~false~
+- ... ::
+*** Knoten
+Es gibt sieben Arten von [[https://www.w3.org/TR/xpath-datamodel-31/#Node][Knoten]]:
+- [[https://www.w3.org/TR/xpath-datamodel-31/#DocumentNode][document]]
+- [[https://www.w3.org/TR/xpath-datamodel-31/#ElementNode][element]]
+- [[https://www.w3.org/TR/xpath-datamodel-31/#AttributeNode][attribute]]
+- [[https://www.w3.org/TR/xpath-datamodel-31/#TextNode][text]]
+- [[https://www.w3.org/TR/xpath-datamodel-31/#NamespaceNode][namespace]]
+- [[https://www.w3.org/TR/xpath-datamodel-31/#ProcessingInstructionNode][processing instruction]]
+- [[https://www.w3.org/TR/xpath-datamodel-31/#CommentNode][comment]]
+
+Jeder Knoten hat eine eindeutige Identität die ihn von allen anderen Knoten im Baum unterscheidet, auch wenn die textuelle Repräsentation von zwei Knoten gleich aussehen mag.
+
+Im folgenden Beispiel gibt es zwei mal das Attribut ~tag="500"~. Es handelt sich dabei aber um zwei eindeutig unterscheidbare Knoten im Datenmodell.
+#+begin_src xml
+<record>
+  <datafield tag="500" ind1=" " ind2=" ">
+    <subfield code="a">Erste Anmerkung</subfield>
+  </datafield>
+  <datafield tag="500" ind1=" " ind2=" ">
+    <subfield code="a">Zweite Anmerkung</subfield>
+  </datafield>
+</record>
+#+end_src
+
+Der /Attributwert/ ~500~ ist ein ~atomicValue~. Dieser hat keine Identität. D. h. der Wert ~500~ ist in beiden Fällen derselbe.
+
+*** Funktionen
+Siehe [[#xpath-funktionen][XPath -- Funktionen]]
+*** Die Sequenz
+Jede valide Instanz des Datenmodells ist eine Sequenz. Eine Sequenz ist eine geordnete Sammlung von null oder mehreren ~items~. Jedes Item in einer Sequenz hat eine stabile Position (ermittelbar durch ~position()~). Das erste Item in einer Sequenz ist auf Position 1 (nicht 0, wie in vielen anderen Programmiersprachen).
+
+Eine Sequenz kann nicht in einer Sequenz enthalten sein. D. h. eine Kombination aus Sequenzen wird "geplättet". D. h. ~(1, (2, 3), (), (), 4)~ wird zu ~(1, 2, 3, 4)~
+
+Ein einzelnes ("singleton") item wird als eine Sequenz modelliert, die genau dieses eine item enthält.
+*** [[https://www.w3.org/TR/xpath-datamodel-31/#document-order][Document Order]]
+Alle [[* Knoten][Knoten]] eines Dokuments haben eine absolute Reihenfolge. Diese Reihenfolge ist stabil und ändert sich nicht während einer Abfrage oder Transformation. Informell ist die Dokumentreihenfolge definiert als die Reihenfolge, in der die Knoten in einer XML-Serialisierung eines Dokuments erscheinen.
+* XPath
+** Pfadausdrücke
+Pfadausdrücke selektieren eine Sequenz von Items und geben diese zurück. Im Kontext der Programmierung heißt das, dass man nicht nur eine Liste der gefundenen Dinge bekommt, sondern tatsächlich die Dinge selbst, um etwas mit ihnen tun zu können.
+
+Einzelne Schritte in einem Pfadausdruck werden durch ~/~ (den ~path operator~) getrennt. Steht ein ~/~ am Anfang eines Ausdrucks, selektiert es den Wurzelknoten.
+
+Nach dem Pfad-Operator ~/~ kommt ein "Schritt". Ein solcher Schritt besteht aus der *Achse*, die die "Bewegungsrichtung" für den Schritt definiert und einem *Knotentest*. Ein Knotentest selektiert Knoten nach ihrer Art, ihrem Namen oder ihrem Typ.
+*** Achsen
+*** Prädikate
+Die Sequenz, die ein Schritt zurückgibt, kann durch *Prädikate* weiter gefiltert werden. Ein Prädikat wendet eine Prüfung auf jeden Knoten der Sequenz an und entfernt alle, bei denen die Prüfung ~false~ ergibt. Daher spricht man auch von Filterausdrücken.
+
+Besipiel:
+#+begin_src xquery
+/collection/record/datafield[@tag="245"]
+#+end_src
+
+~/collection/record~ erzeugt eine Sequenz mit allen ~record~-Elementen. ~/datafield~ holt wiederum aus all diesen Records alle ~datafields~. Das Prädikat ~[@tag="245"]~ lässt aber nur die durch, die ein Attribut ~tag~ mit dem Wert ~245~ haben.
+
+Man kann auch mehrere Prädikate angeben. Diese werden von links nach rechts abgearbeitet:
+
+#+begin_src xquery
+/collection/record/datafield[@tag="245"][@ind2!="0"]
+#+end_src
+
+Hier bekommen wir alle Titelfelder mit zu übergehenden Zeichen am Anfang. Man sieht hier auch, dass es zweckdienlich ist, zuerst die Prädikate anzugeben, die mehr ausfiltern (also kürzere Sequenzen durchlassen). Hätte man die Prädikate oben vertauscht würden zuerst alle ~datafield~ selektiert, die keinen zweiten Indikator "0" haben. Diese große Menge wiederum würde erst auf das Vorhandensein von ~tag="245"~ geprüft, während in der Version oben nur noch wenige elemente überhaupt die zweite Prüfung erreichen. Das kann gravierende Auswirkungen auf die Laufzeit einer Abfrage haben!
+** Vergleichsausdrücke
+Xpath kennt zwei Arten von [[https://www.w3.org/TR/xpath-31/#id-comparisons][Vergleichen]]: Value comparisons und general comparisons
+
+*** [[https://www.w3.org/TR/xpath-31/#id-value-comparisons][Value comparisons]]
+Das ist, was man erwartet, wenn man an Vergleiche denkt. Hier werden zwei Werte verglichen, also z. B. zwei Strings, zwei Ganzzahlen, etc. Wenn auf einer Seite des Operators mehr als ein Item ist, führt das zu einem Fehler.
+
+Die Operatoren sind:
+
+| Operator | Vergleich      |
+|----------+----------------|
+| ~eq~     | gleich         |
+| ~ne~     | ungleich       |
+| ~gt~     | größer         |
+| ~ge~     | größer gleich  |
+| ~lt~     | kleiner        |
+| ~le~     | kleiner gleich |
+
+Ergebnis des Vergleichs zweier Operanden ist ein Wahrheitswert. D. h. ~2 eq 2~ ist ~true~ ~2 gt 2~ ist ~false~.
+*** [[https://www.w3.org/TR/xpath-31/#id-general-comparisons][General comparisons]]
+Bei general comparisons tritt wieder die Sequenz als Bestimmendes Merkmal des Datenmodells zutage.
+Hier werden alle Werte der Sequenz auf der linken Seite mit allen Werten auf der rechten Seite verglichen. Wenn einer dieser Vergleiche erfolgreich ist, liefert die general comparison ~true~ zurück.
+
+Die Operatoren:
+
+| Operator | Vergleich      |
+|----------+----------------|
+| ~=~      | gleich         |
+| ~!=~     | ungleich       |
+| ~>~      | größer         |
+| ~>=~     | größer gleich  |
+| ~<~      | kleiner        |
+| ~<=~     | kleiner gleich |
+
+Das ist sehr oft sehr praktisch. Z. B. kann man prüfen, ob eine Sequenz einen bestimmten Wert enthält: ~2 = (1, 2, 3, 4)~ ist ~true~. Es ist aber mit Vorsicht zu genießen, weil ~2 != (1, 2, 3, 4)~ ist auch ~true~. Warum?
+
+** [[https://www.w3.org/TR/xpath-31/#id-logical-expressions][Logische Ausdrücke]]
+Für logische Operationen gibt es in XPath die Operatoren ~and~ und ~or~ sowie die Funktion ~not()~.
+
+Diese Operatoren tun das, was man erwartet: Sie nehmen zwei Wahrheitswerte und geben einen Wahrheitswert zurück und folgen den Regeln der zweiwertigen Aussagen- oder Prädikatenlogik. Der Bequemlichkeit halber die üblichen Wahrheitstafeln:
+
+Für ~or~:
+| OR    | true | false |
+| true  | true | true  |
+| false | true | false |
+
+Für ~and~:
+| AND   | true  | false |
+| true  | true  | false |
+| false | false | false |
+
+Und ~not()~
+| NOT | true  | false |
+|     | false | true  |
+
+Das heißt trivialerweise das ~true() and true()~ ~true~ ergibt, etc. Natürlich werden üblicherweise keine nackten Wahrheitswerte sondern quasi Aussagen überprüft, wie z. B. hier:
+
+#+begin_src xquery
+let $number1 := 3
+let $number2 := 7
+let $string1 := "ogopogo"
+return $number1 gt $number2 or string-length($string1) eq $number2 and string-length($string1) mod $number1 eq 1
+#+end_src
+
+*** [[https://www.w3.org/TR/xpath-31/#id-ebv][Effective Boolean Value]]
+Die Dinge, die mit logischen Operatoren verbunden sind, können nicht nur Wahrheitswerte sein. Oft verwendet man den "effective boolean value" (~EBV~). Ein sehr übliches Beispiel ist ein Prädikat, das auf das Vorhandensein eines Elements prüft, wie ~datafield[subfield]~. Wir haben ja oben gelesen, dass ein Prädikat alle items einer Sequenz durchlässt, bei denen die Bedingung im Prädikat zutrifft, also /wahr/ ist. Nun ist das Ergebnis von ~subfield~ nicht ~true~ oder ~false~ sondern eine (möglicherweise leere) Sequenz aller Subfelder. Trotzdem funktioniert es. Warum? Es gibt Regeln, nach denen ein /effektiver Wahrheitswert/ gebildet wird:
+
+1. leere Sequenz \rightarrow ~false~
+2. eine Sequenz deren erstes Item ein Knoten (~node~) ist \rightarrow ~true~
+3. bei Einzelwerten der Typen ~xs:string~, ~xs:anyURI~, ~xs:untypedAtomic~ und davon abgeleiteten Typen
+   a. wenn der Wert die Länge ~0~ hat \rightarrow ~false~
+   b. sonst: ~true~
+4. bei Einzelwerten eines numerischen Typs (also Zahlen)
+   a. wenn der numerische Wert ~NaN~ oder ~0~ ist \rightarrow ~false~
+   b. sonst: ~true~
+5. In allen anderen Fällen wirft der Prozessor einen Fehler.
+
+Im Beispiel oben (~datafield[subfield]~) wird einer der Fälle 1. oder 2. zutreffen.
+
+** Funktionen
+:PROPERTIES:
+:CUSTOM_ID: xpath-funktionen
+:END:
+XPath und XQuery (und damit an bestimmten Stellen auch XSLT) haben eine umfangreiche Sammlung an Funktionen: https://www.w3.org/TR/xpath-functions-31/
+
+Diese sind hilfreich sowohl in Prädikaten (um eine Ergebnissequenz zu filtern) als auch zum Erstellen von modifizierten Ergebnissequenzen.
+*** Beispiele
+Einsatz in Prädikaten:
+
+#+begin_src xquery
+/persons/person/name[upper-case(.) eq "ELVIS"]
+#+end_src
+
+Findet alle Personen mit Namen "Elvis", egal ob sie groß oder klein geschrieben sind. Die Funktion gibt immer den Eingabestring in Großbuchstaben zurück und wir prüfen gegen den String "ELVIS".
+
+#+begin_src xquery
+/persons/person/name[upper-case(.) eq "Elvis"]
+#+end_src
+Was bekommen wir hier zurück?
+
+Zur Konstruktion eines neuen Wertes:
+#+begin_src xml
+<xsl:template match="datafield[@tag='245']/subfield[@code='a']">
+  <subfield code="a">
+    <xsl:value-of select="replace(., 'foo', 'bar')" />
+  </subfield>
+</xsl:template>
+#+end_src
+
+Dieses Template ändert den Wert von ~245$$a~, indem es die Zeichenkette ~foo~ gegen ~bar~ ersetzt       .
+** Beispielabfragen
+#+begin_src xquery
+/collection/record => count()
+#+end_src
+
+#+RESULTS:
+: 1000
+
+#+begin_src xml
+
+#+end_src
+* XSLT
+** Verarbeitungsmodell
+#+CAPTION: Kay 2008, p. 45
+#+attr_html: :width 80%
+[[file:assets/img/kay2008_p45.png]]
+** Ablauf einer Transformation
+Danke ChatGPT!
+
+*** Eingabedaten
+- Eingabe besteht aus:
+  1. Dem Quell-XML-Dokument.
+  2. Dem XSLT-Stylesheet (ebenfalls XML-Struktur).
+- Beides wird geparst und in den Speicher geladen
+
+*** Grundidee
+- XSLT folgt einem *deklarativen* Ansatz:
+  - Es wird nicht Schritt-für-Schritt programmiert,
+    sondern Regeln (Templates) definieren, wie Knoten im Eingabe-XML
+    in Ausgabestrukturen transformiert werden.
+- Die Verarbeitung basiert auf dem *Match-and-Apply*-Prinzip.
+  - "Wenn du diesen Input siehst, generiere Output, der so und so aussieht."
+
+*** Ablauf im Detail
+   1. *Parsing*
+      - Das Quell-XML und das XSLT-Stylesheet werden beide zu
+        **XML-Baumstrukturen**
+   2. *Initiales Template*
+      - Optional kann man bestimmen, welches Template als erstes ausgeführt werden soll
+   3. *Template-Matching*
+      - Der Prozessor sucht zu jedem aktuellen Eingabeknoten das am *beste passende*
+        Template (~<xsl:template match="...">~).
+      - Falls kein passendes Template existiert, greift die eingebaute Standardregel:
+        - Für Texte: Ausgabe des Textinhalts.
+        - Für Elemente: rekursives Anwenden auf Kindknoten.
+   4. *Anweisungen im Template*
+      - Wichtige Deklarationen:
+        - ~xsl:apply-templates~ → Verzweigt zu anderen Knoten
+        - ~xsl:sequence~ → Schreibt eine Sequenz von items in die Ausgabe
+        - ~xsl:value-of~ → Gibt Textwert eines Knotens aus
+        - ~xsl:for-each~ → Iteration über Knotenmengen
+        - ~xsl:if~ / ~xsl:choose~ → Bedingte Verarbeitung
+   5. *Rekursive Verarbeitung*
+      - ~xsl:apply-templates~ löst wieder Template-Matching aus.
+      - Dadurch kann der gesamte Eingabebaum Schritt für Schritt
+        transformiert werden.
+   6. *Ausgabe*
+      - Der Ausgabebaum wird "serialisiert" (nicht notwendigerweise, aber in unseren Fällen immer)
+      - XSLT erzeugt standardmäßig XML oder Text,
+        aber je nach ~xsl:output~ auch HTML oder andere Textformate.
+
+*** Wichtige Eigenschaften
+   - *Baumorientiert*: XSLT arbeitet immer mit Knotenbäumen, nicht mit Zeichenketten.
+   - *Deklarativ*: Man beschreibt *was* passieren soll, nicht *wie*.
+   - *Regelgesteuert*: Verarbeitung läuft über Template-Matching, nicht lineare Befehlsfolgen.
+   - *Deterministisch*: Bei gleichen Eingaben und Stylesheets immer gleiche Ausgaben.
+
+*** Beispielablauf
+   Gegeben:
+   #+BEGIN_SRC xml
+   <root>
+     <item>A</item>
+     <item>B</item>
+   </root>
+   #+END_SRC
+
+   Stylesheet:
+   #+BEGIN_SRC xml
+   <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+     <xsl:template match="/">
+       <html><body><xsl:apply-templates/></body></html>
+     </xsl:template>
+
+     <xsl:template match="item">
+       <p><xsl:value-of select="."/></p>
+     </xsl:template>
+   </xsl:stylesheet>
+   #+END_SRC
+
+   Ablauf:
+   1. Start: Template ~/~ → Erzeugt ~<html><body>…</body></html>~.
+   2. ~xsl:apply-templates~ → Findet ~<item>~-Elemente.
+   3. Für jedes ~<item>~: passendes Template erzeugt ~<p>Inhalt</p>~.
+   4. Ausgabe:
+      #+BEGIN_SRC html
+      <html><body><p>A</p><p>B</p></body></html>
+      #+END_SRC
+*** Ablaufdiagramm
+#+BEGIN_SRC ascii
+Quell-XML
+   │
+   ▼
+Parsen → XML-Baum
+   │
+   │ + XSLT-Stylesheet → Parsen → Template-Baum
+   ▼
+Start-Template (match="/")
+   │
+   ▼
+Template-Matching + Ausführung (apply-templates, value-of, etc.)
+   │
+   ▼
+Ausgabebaum
+   │
+   ▼
+Serialisierung → Endausgabe (XML / HTML / Text)
+#+END_SRC
+* Beispiele
+** Text in Subfeld ändern
+Wir wollen Zahlen am Ende von ~9707#$$d~ entfernen.
+
+#+begin_src xml
+<xsl:template match="datafield[@tag='970']
+                                [@ind1='7']
+                                [@ind2=' ']
+                                /subfield[@code='d'][matches(., '^IV-SCAN[0-9]+$')]">
+  <subfield code="d">{replace(., "[0-9]+$", "")}</subfield>
+</xsl:template>
+#+end_src
+
+Dieses Template matcht auf Subfelder ~d~ in ~9707#~, wenn diese mit dem Muster ~^IV-SCAN[0-9]+$~ entsprechen. D. h. wenn sie mit ~IV-SCAN~ beginnen, direkt gefolgt von einer oder mehreren Ziffern. Danach kommt nichts mehr.
+
+Aus
+#+begin_src xml
+<datafield tag="970" ind1="7" ind2=" ">
+  <subfield code="d">IV-SCAN9</subfield>
+  <subfield code="d">IV-SCAN88</subfield>
+  <subfield code="d">IV-SCAN42LÖSCHTMANNICHT</subfield>
+  <subfield code="a">Testfeld</subfield>
+</datafield>
+#+end_src
+wird dann
+#+begin_src xml
+<?xml version="1.0"?>
+<datafield tag="970" ind1="7" ind2=" ">
+  <subfield code="d">IV-SCAN</subfield>
+  <subfield code="d">IV-SCAN</subfield>
+  <subfield code="d">Nicht IV-SCAN1</subfield>
+  <subfield code="d">IV-SCAN42LÖSCHTMANNICHT</subfield>
+  <subfield code="a">Testfeld</subfield>
+</datafield>
+#+end_src
+** 337 aus 338 generieren
+Drools-Implementierung: https://gitlab.obvsg.at/AlmaConfig/droolsConfig/-/blob/master/rules/normalizationRules/KATA/src/KATA-004-a33Xb.src?ref_type=heads
+
+Also so eine Regel für jeden möglichen Code in ~334##$$b~ (11 Stück):
+#+begin_src drools
+rule "KATA-004-a33Xb: generate 337 b.s from 338 b.s*"
+    /*
+    name: KATA-004-a33Xb
+    fields: 337
+    definition: generate 337 b.s from 338 b.s*
+    note:
+    */
+
+    when
+        exists "338.b.s*" and not exists "337.b.s"
+    then
+        addField "337.b.s"
+end
+#+end_src
+
+XSLT-Umsetzung:
+#+begin_src xml
+...
+#+end_src
+** Bindestriche aus ISBN in 020 entfernen
+Drools-Regel:
+#+begin_src drools
+rule "KATA-014-ISBN: delete hyphens in 020 SF-a"
+    /*
+    name: KATA-014-ISBN
+    fields: 020
+    definition: Entferne die Bindestriche aus ISBNs in 020, 77X, 78X.
+    note:
+    */
+
+    when
+        exists "020.a" or exists "77*.z" or exists "78*.z"
+    then
+        replaceContents "020.a.-" with ""
+        replaceContents "77*.z.-" with ""
+        replaceContents "78*.z.-" with ""
+end
+#+end_src
+
+XSLT
+#+begin_src xml
+...
+#+end_src
+** Feld 655
+Setze den zweiten Indikator auf '7', wenn es ein nicht-leeres ~$$2~ gibt.
+#+begin_src drools
+rule "KATA-074-655ind2: change second indicator to 7, if exists Sf2"
+    /*
+    name: KATA-074-655ind2
+    fields: 655
+    definition: Ändere `655 @ind2` auf `7` wenn es SF2 gibt.
+    note:
+    */
+    when
+        exists "655.2"
+    then
+        changeFirstIndicator "655" to " "
+        changeSecondIndicator "655" to "7" if (exists "655.2")
+end
+#+end_src
+
+XSLT
+#+begin_src xml
+...
+#+end_src
+* Übungen
+** ex01: Felder löschen
+*** ex01_01: Lösche das Feld ~998~
+*** ex01_02: Lösche ~77308$$9~
+** ex02: Felder nach inhaltlichen Kriterien löschen
+*** ex02_01:
+Wir wollen alle Felder 500 löschen, die in ~$$a~ den Text ~foo~ enthalten.
+*** ex02_02:
+Wir wollen alle Felder 500 löschen, die in ~$$a~ den Text ~foo~, aber nicht den Text ~bar~ enthalten.
+*** ex02_03:
+Wir wollen alle Felder 500 löschen, die in ~$$a~ den Text ~foo~ direkt gefolgt von einer beliebig langen Zahl enthalten. Also ~foo1~, ~foo667~, ~foo00000000000000001~.
+
+*BONUS:* Berücksichtige auch Dezimalzahlen. Also ~foo3.141592653589793~, mit Punkt oder auch Komma.
+** ex03: Felder umbenennen
+*** ex03_02: 653 bedingungslos nach 982 verschieben
+Nicht vergessen: ~$$9LOCAL~ hinzufügen!
+
+*** ex03_02: Hochschulschriftenvermerk von ~500##~ nach ~502##~ verschieben
+** ex04: Feldinhalte ändern
+*** ex04_01: Falsche GND-Nummer in 655
+Eine Zeitlang war in der CV-Liste für den Term "Backbuch" eine falsche GND-ID, nämlich ~(DE-588)7502992-3~. Richtig wäre ~(DE-588)1071926306~.
+- Stylesheet: [[file:exercises/ex04/ex04_01.xsl]]
+- Tests: [[file:exercises/ex04/ex04_01.xspec]]
+*** ex04_01: Beziehungskennzeichnung in ~700XX $$4~ von ~oth~ auf ~ctb~ ändern
+
+* Starten von Transformationen und Tests
+** Eine Transformation starten
+Diese Anleitung geht davon aus, dass es in ~$PATH~ das Script ~saxon-xslt~ gibt und dieses ausführbar ist. Dieses wird folgendermaßen aufgerufen:
+
+#+begin_src shell
+saxon-xslt SOURCE-FILE XSLT-STYLESHEET
+#+end_src
+
+Damit wird ~SOURCE-FILE~ entsprechend ~XSLT-STYLESHEET~ transformiert und das Ergebnis auf der Konsole (auf ~stdout~) ausgegeben. Will man das Ergebnis in einer Datei speichern, nutzt man die output redirection der shell:
+
+#+begin_src shell
+saxon-xslt marc_records.xml convert.xsl > marc_records_converted.xml
+#+end_src
+** Tests laufen lassen
+Diese Anleitung geht davon aus, dass es in ~$PATH~ das Script ~xspec.sh~ gibt und dieses ausführbar ist. Der Aufruf ist simpel:
+
+#+begin_src shell
+xspec.sh XSPEC-FILE
+#+end_src
+
+Das heißt, wenn die Tests in der Datei ~tests/tests.xspec~ wohnen:
+
+#+begin_src shell
+xspec.sh tests/test.xspec
+#+end_src
+
+XSpec gibt die Ergebnisse der Tests auf der Konsole aus. Ein detaillierter Testbericht ist als HTML-Datei verfügbar. Wo diese zu finden ist, steht am Ende der Konsolenausgabe.
+
+* Spezifikationen
+- XPathXML Path Language (XPath) 3.1 :: https://www.w3.org/TR/xpath-31/
+- XDMXQuery and XPath Data Model (XDM) 3.1 :: https://www.w3.org/TR/xpath-datamodel-31/
+- XPath and XQuery Functions and Operators 3.1 :: https://www.w3.org/TR/xpath-functions-31/
+- XSL Transformations (XSLT) Version 3.0 :: https://www.w3.org/TR/xslt-30/

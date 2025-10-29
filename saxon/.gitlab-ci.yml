@@ -1,0 +1,46 @@
+image: openjdk:8-alpine
+stages:
+  - test
+  - deploy
+before_script:
+  - apk update
+  - apk add openssh-client bash
+  - eval $(ssh-agent -s)
+  - echo "$DEPLOY_KEY" | tr -d '\r' | ssh-add - > /dev/null
+  - mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "${DEPLOY_KNOWN_HOSTS}" > ~/.ssh/known_hosts && chmod 644  ~/.ssh/known_hosts
+variables:
+  DEPLOY_PATH: "/work/obvsoft/prod/apps/Tools/saxon"
+  DEPLOY_PATH_SYMLINK_BIN: "/work/obvsoft/prod/bin"
+
+
+testrun:
+  stage: test
+  script:
+    - ls -l bin
+    - ls -l share/java
+    - ls -l test
+    - echo -n "TEST QUERY " && bin/saxon-xquery -s:test/input.xml test/query.xql
+    - echo -n "TEST XSLT  " && bin/saxon-xslt -s:test/input.xml test/transform.xsl
+
+  
+.deploy_template_master: &deploy_job_definition
+  stage: deploy
+  script: 
+    - echo "SOURCE ${CI_PROJECT_URL}" > DEPLOY && echo "BUILD JOB ${CI_JOB_URL}" >> DEPLOY && echo  "COMMIT ${CI_COMMIT_SHA}" >> DEPLOY && echo "STARTED BY ${GITLAB_USER_LOGIN}" >> DEPLOY && echo -n "DATE " >> DEPLOY && date +%Y-%m-%dT%H:%M:%S >> DEPLOY
+    - ssh "${DEPLOY_HOST}" mkdir -p -v "${DEPLOY_PATH}"
+    - scp -r -p DEPLOY ./share ./bin "${DEPLOY_HOST}:${DEPLOY_PATH}/"
+    - ssh "${DEPLOY_HOST}" ln -f -s "${DEPLOY_PATH}/bin/*" "${DEPLOY_PATH_SYMLINK_BIN}/"
+  only:
+    - master
+    
+  
+deploy_galileo:
+  <<: *deploy_job_definition
+  variables:
+    DEPLOY_HOST: "obvsoft@galileo"
+
+deploy_obelix:
+  <<: *deploy_job_definition
+  variables:
+    DEPLOY_HOST: "obvsoft@obelix"
+

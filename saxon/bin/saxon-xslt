@@ -1,0 +1,6 @@
+#!/bin/bash
+
+PREFIX=$(dirname $(dirname $(readlink -f ${BASH_SOURCE[0]})))/share/java
+CLASSPATH=$(ls -1 $PREFIX | xargs -n1 printf "$PREFIX/%s:" | head -c -1)
+
+exec java $JAVA_OPTS -classpath "$CLASSPATH" net.sf.saxon.Transform "$@"
