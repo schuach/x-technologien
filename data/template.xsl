@@ -7,8 +7,7 @@
                 exclude-result-prefixes="xs utils mrclib"
                 version="3.0">
 
-  <!-- <xsl:include href="http://share-test.obvsg.at/xsldist/mrclib/mrclib-no-ns.xsl" /> -->
-  <!-- <xsl:include href="http://share-test.obvsg.at/xsldist/mrclib/mrclib-ns.xsl" /> -->
+  <!-- <xsl:include href="http://share-test.obvsg.at/xsldist/mrclib/mrclib.xsl" /> -->
   <xsl:mode on-no-match="shallow-copy" />
-
+  
 </xsl:stylesheet>
