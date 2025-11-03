@@ -1,0 +1,73 @@
+#+title: Workshop
+
+* Warum XSLT?
+- Funktional
+- Deklarativ
+- Strikte Trennung von Eingabe und Ausgabe
+- Möglichkeit außerhalb von Alma automatisiert zu testen
+** Grundidee
+- XSLT folgt einem *deklarativen* Ansatz:
+  - Es wird nicht Schritt-für-Schritt programmiert,
+    sondern Template-Regeln definieren, wie Knoten im Eingabe-XML
+    in Ausgabestrukturen transformiert werden.
+- Die Verarbeitung basiert auf dem *Match-and-Apply*-Prinzip.
+  - "Wenn du diesen Input siehst, generiere Output, der so und so aussieht."
+* XSLT in Alma
+- Kann in Normalisierungsprozessen eingesetzt werden
+- Beim Anlegen einer Regel, einfach "XSL" auswählen
+- Bearbeiten des Codes in Text Editor (in Alma nicht sinnvoll möglich)
+** Einschränkungen in Alma
+- Keine CD möglich, weil Stylesheets nur in den MDE kopiert werden können.
+- Es kann nur eine monolithische "Datei" hinterlegt werden (kein ~xsl:include~ oder ~xsl:import~)
+- Deployment von Saxon in Alma nicht optimiert: Stylesheet wird sehr oft kompiliert, obwohl es nicht geändert wird.
+
+* Das XSLT-Stylesheet
+** Das xsl:stylesheet-element
+Verpflichtende Attribute:
+- der XSLT-Namespace
+- die Version
+** Top level Elemente
+#+begin_src xml
+<xsl:include href="..." />
+<xsl:import href="..." />
+<xsl:output indent="yes" ... />
+<xsl:mode on-no-match="..." ... />
+<xsl:param name="..." ...> ...
+#+end_src
+** Templates
+*** Default templates
+- Wenn es für einen Knoten keine passendes Template-Regel gibt, wird eine [[https://www.w3.org/TR/xslt-30/#built-in-rule][Built-in-Template-Regel]] auf diesen Knoten angewandt.
+
+- Es gibt sechs Sets von eingebauten Template-Regeln, die Default-Regel ist [[https://www.w3.org/TR/xslt-30/#built-in-templates-text-only-copy][text-only-copy]].
+
+**** xsl:mode
+- Ein Knoten kann in verschiedenen ~modi~ verarbeitet werden. Für jeden Modus kann man festlegen, welches Set an eingebauten Regeln angewandt werden soll. Hier für den ~#default~-Mode:
+  #+begin_src xml
+<xsl:mode on-no-match="shallow-copy" />
+  #+end_src
+*** Match-Templates
+*** Named Templates
+*** Literale Ausgabeelemente
+*** Text value templates
+** Funktionen
+*** Funktionslibrary
+- XPath and XQuery Functions and Operators 3.1 :: https://www.w3.org/TR/xpath-functions-31/
+*** Selbst definierte Funktionen
+- Können von XPath-Ausdrücken aus aufgerufen werden
+- Müssen immer ein Namespace-Prefix haben!
+* Beispiele für XSLT-Anwendungen
+** [[https://github.com/lcnetdev/marc2bibframe2/tree/master][marc2bibframe2]]: MARC21 zu BIBFRAME-Konverter der Library of Congress
+** Diverses an der OBVSG
+  - Konverter für Migrationen aus Bibliotheca, DABIS, Aleph, ...
+  - Alma Normalisierungen und die dazugehörige Maschinerie: [[https://share.obvsg.at/xsldocs/][Öffentliche Dokumentation]]
+    - ~mrclib~: eine Library für übliche Operationen auf MARC-Daten
+    - ~xslt-bundler~: baut ein dickes stylesheet aus verteilten Modulen
+    - ~xslt-documentation-generator~: Generiert Dokumentation aus strukturierten Kommentaren und dem XSLT-Code selbst
+* Beispeile
+...
+
+* Spezifikationen
+- XPathXML Path Language (XPath) 3.1 :: https://www.w3.org/TR/xpath-31/
+- XDMXQuery and XPath Data Model (XDM) 3.1 :: https://www.w3.org/TR/xpath-datamodel-31/
+- XPath and XQuery Functions and Operators 3.1 :: https://www.w3.org/TR/xpath-functions-31/
+- XSL Transformations (XSLT) Version 3.0 :: https://www.w3.org/TR/xslt-30/
