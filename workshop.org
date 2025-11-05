@@ -2,6 +2,8 @@
 #+reveal_theme: solarized
 #+options: toc:1 ^:nil num:nil
 
+* Repo
+https://github.com/schuach/x-technologien
 * Warum XSLT?
 - Funktional
 - Deklarativ
@@ -135,12 +137,14 @@ Für Textknoten gilt das nur, wenn ein enthaltendes Element das Attribut ~expand
 
 - Ich möchte ~336~, ~337~, ~338~ löschen.
 ** Tags und Indikatoren ändern
-Ich will ~500~er in ~501~ umwandeln, wenn sie den Text "Univ., Diss.' enthält.
+Ich will ~500~er in ~502~ umwandeln, wenn sie den Text "Univ., Diss.' enthält.
 ** Text ersetzen
 Im ~leader~ sollen alle "#" durch Leerzeichen ersetzt werden. Außerdem soll Pos. 19 auf Blank gesetzt werden, wenn es keine ~830~ gibt und ~LDR/07-m~.
 
 ** EKI erstellen
 Aus der ~009~, sofern es noch keine EKI gibt.
+** ORCID von SF9 nach SF1 verschieben
+
 ** Output sortieren
 - Transformations in Variable, diese dann sortiert ausgeben.
 ** Interessantere Fälle

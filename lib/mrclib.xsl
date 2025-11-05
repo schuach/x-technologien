@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:mrclib="https://share.obvsg.at/xml/xsl/mrclib" expand-text="yes" version="3.0">
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:mrclib="https://share.obvsg.at/xml/xsl/mrclib" exclude-result-prefixes="mrclib xs" expand-text="yes" version="3.0">
 
   <!--~doc:global
       @title mrclib - common operations on MARC21-XML data
