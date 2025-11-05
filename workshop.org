@@ -1,4 +1,6 @@
 #+title: Workshop
+#+reveal_theme: solarized
+#+options: toc:1 ^:nil num:nil
 
 * Warum XSLT?
 - Funktional
@@ -12,6 +14,39 @@
     in Ausgabestrukturen transformiert werden.
 - Die Verarbeitung basiert auf dem *Match-and-Apply*-Prinzip.
   - "Wenn du diesen Input siehst, generiere Output, der so und so aussieht."
+** Exkurs: Warum Mutation keine tolle Sache ist
+~5050#~ soll in ~50580~ geändert werden.
+#+begin_src drools
+changeSecondIndicator "505" to "0" if (exists "505.{0,-}")
+changeFirstIndicator "505" to "8" if (exists "505.{0,0}")
+#+end_src
+** Exkurs: Warum es eine tolle Sache ist deklarativ zu sein
+Ich möchte einen Record, der nur folgendes Feld enthält:
+
+: 24500 $$aHow to sharpen pencils $$b a practical & theoretical treatise on the artisanal craft of pencil sharpening for writers, artists, contractors, flange turners, anglesmiths, & civil servants $$c David Rees
+*** Python
+#+begin_src python
+import pymarc
+
+record = pymarc.Record()
+df245 = pymarc.Field(tag="245", indicators=["0", "0"])
+df245.add_subfield("a", "How to sharpen pencils")
+df245.add_subfield("b", "a practical & theoretical treatise on the artisanal craft of pencil sharpening for writers, artists, contractors, flange turners, anglesmiths, & civil servants")
+df245.add_subfield("c", "David Rees")
+record.add_field(df245)
+
+# print XML
+pymarc.marcxml.record_to_xml(record).decode()
+#+end_src
+*** XSLT
+#+begin_src xml
+<datafield tag="245" ind1="0" ind2="0">
+  <subfield code="a">How to sharpen pencils</subfield>
+  <subfield code="b">a practical &amp; theoretical treatise on the artisanal craft of pencil sharpening for writers, artists, contractors, flange turners, anglesmiths, &amp; civil servants</subfield>
+  <subfield code="c">David Rees</subfield>
+</datafield>
+#+end_src
+
 * XSLT in Alma
 - Kann in Normalisierungsprozessen eingesetzt werden
 - Beim Anlegen einer Regel, einfach "XSL" auswählen
@@ -40,15 +75,43 @@ Verpflichtende Attribute:
 
 - Es gibt sechs Sets von eingebauten Template-Regeln, die Default-Regel ist [[https://www.w3.org/TR/xslt-30/#built-in-templates-text-only-copy][text-only-copy]].
 
-**** xsl:mode
+*** xsl:mode
 - Ein Knoten kann in verschiedenen ~modi~ verarbeitet werden. Für jeden Modus kann man festlegen, welches Set an eingebauten Regeln angewandt werden soll. Hier für den ~#default~-Mode:
   #+begin_src xml
 <xsl:mode on-no-match="shallow-copy" />
   #+end_src
 *** Match-Templates
+Wird ein Knoten angetroffen, auf den das Pattern im ~match~-Attribut passt, wird der enthaltene Sequenzkonstruktor evaluiert und das Ergebnis in den Ausgabebaum geschrieben.
+
+#+begin_src xml
+<xsl:template match="datafield[@tag='245'][@ind2 ne '0']/subfield[@code='a']">
+  <subfield code="a">{mrclib:nonFilingChars(., ../@ind2)}</subfield>
+</xsl:template>
+#+end_src
 *** Named Templates
-*** Literale Ausgabeelemente
-*** Text value templates
+Eine Template-Regel, die mit ihrem Namen aufgerufen werden kann (mit ~<xsl:call-template name="template-name" />~). Die Template-Regel wird im Kontext des Aufrufs ausgeführt.
+
+#+begin_src xml
+<xsl:template name="wrapField">
+  <xsl:param name="targetTag" />
+  <datafield tag="{$targetTag} ind1=" " ind2=" ">
+    <subfield code="V">{@tag || @ind1 || @ind2}</datafield>
+    <xsl:apply-templates />
+  </datafield>
+</xsl:template>
+#+end_src
+
+*** Literal Result Elements
+- Alle MARC-Elemente in den bisherigen Beispielen waren "literal result elements".
+- Jedes Element innerhalb eines Sequenzkonstruktors, das nicht zum xsl-Namespace gehört, wird so wie es ist (literal) in den Output geschrieben.
+*** Text and attribute value templates
+Der Stringwert eines Attributs oder eines Textknotens kann Ausdrücke in geschwungenen Klammern enthalten. Diese Ausdrücke werden evaluiert und ihr Ergebnis in den String eingefügt.
+
+Für Textknoten gilt das nur, wenn ein enthaltendes Element das Attribut ~expand-text="yes"~ hat.
+
+#+begin_src xml
+<element>2 + 2 = {2 + 2}</element>
+#+end_src
 ** Funktionen
 *** Funktionslibrary
 - XPath and XQuery Functions and Operators 3.1 :: https://www.w3.org/TR/xpath-functions-31/
@@ -63,10 +126,34 @@ Verpflichtende Attribute:
     - ~mrclib~: eine Library für übliche Operationen auf MARC-Daten
     - ~xslt-bundler~: baut ein dickes stylesheet aus verteilten Modulen
     - ~xslt-documentation-generator~: Generiert Dokumentation aus strukturierten Kommentaren und dem XSLT-Code selbst
-* Beispeile
-...
+* Praktische Beispiele
+** Felder löschen
+- Ich möchte das Feld ~CAT~ löschen.
+#+begin_src xml
 
-* Spezifikationen
+#+end_src
+
+- Ich möchte ~336~, ~337~, ~338~ löschen.
+** Tags und Indikatoren ändern
+Ich will ~500~er in ~501~ umwandeln, wenn sie den Text "Univ., Diss.' enthält.
+** Text ersetzen
+Im ~leader~ sollen alle "#" durch Leerzeichen ersetzt werden. Außerdem soll Pos. 19 auf Blank gesetzt werden, wenn es keine ~830~ gibt und ~LDR/07-m~.
+
+** EKI erstellen
+Aus der ~009~, sofern es noch keine EKI gibt.
+** Output sortieren
+- Transformations in Variable, diese dann sortiert ausgeben.
+** Interessantere Fälle
+*** ISBD-Interpunktion ersetzen
+*** 264 mit mehrerer Subfeldern b
+*** Sortierung +1
+**** Subfeld-Sortier-Template
+
+
+* Weblinks
+** OBVSG
+- Dokumentation von XSLT-Code :: https://share.obvsg.at/xsldocs
+** Spezifikationen
 - XPathXML Path Language (XPath) 3.1 :: https://www.w3.org/TR/xpath-31/
 - XDMXQuery and XPath Data Model (XDM) 3.1 :: https://www.w3.org/TR/xpath-datamodel-31/
 - XPath and XQuery Functions and Operators 3.1 :: https://www.w3.org/TR/xpath-functions-31/
